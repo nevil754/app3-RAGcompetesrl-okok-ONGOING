@@ -22,7 +22,7 @@ from app.workers.celery_app import celery_app
     name="app.workers.ingestion_tasks.ingest_document",
 )
 def ingest_document(
-    self,  #istanza della task Celery
+    self,     #istanza della task Celery
     tenant_id: str,
     tenant_slug: str,
     document_id: str,
@@ -74,7 +74,7 @@ def ingest_document(
         )
     try:
         start = time.time()   #start timer 
-        # 2-6. Pipeline completa: parse -> chunk -> embed -> upsert Qdrant
+        #pipeline completa: parse -> chunk -> embed -> upsert Qdrant
         result = run_ingestion_pipeline(
             tenant_id=tenant_id,
             tenant_slug=tenant_slug,
@@ -153,8 +153,9 @@ def ingest_document(
                     {"id": document_id}
                 )
         if is_final:
-            raise exc  #propaga l'eccezione originale, non MaxRetriesExceededError
-        raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))  #backoff esponenziale
+            raise exc    #propaga l'eccezione originale, non MaxRetriesExceededError
+        raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))  #self.retry() lancia internamente un'eccezione speciale (Retry) che dice al worker che il task non è fallito definitivamente ma rimettilo in coda e riprovalo più tardi.
+
 
 @celery_app.task(
     bind=True,      #permette accesso a self (il classico self per l'istanza stessa)
@@ -190,9 +191,9 @@ def reprocess_document(
         )
     )
     logger.info(f"Vecchi vettori cancellati per documento {document_id}")
-    task = ingest_document.apply_async(
-        args=[tenant_id, tenant_slug, document_id, file_path],
-        queue="low",
+    task = ingest_document.apply_async(   #applyc async() mette in coda il task Celery, lo esegue in background e ritorna un AsyncResult
+        args=[tenant_id, tenant_slug, document_id, file_path],  
+        queue="low",  #il task viene inserito nella queue low
     )
     return {"status": "queued", "task_id": task.id, "document_id": document_id}
 

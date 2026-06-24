@@ -243,7 +243,7 @@ BEGIN  --inizio del corpo
         progress_pct    TINYINT             NOT NULL DEFAULT 0,
         error_msg       NVARCHAR(MAX)       NULL,
         retry_count     TINYINT             NOT NULL DEFAULT 0,
-        started_at      DATETIME2           NULL,
+        started_at      DATETIME2(3)           NULL,
         finished_at     DATETIME2(3)           NULL,
         created_at      DATETIME2(3)           NOT NULL DEFAULT SYSUTCDATETIME(),
         CONSTRAINT [PK_' + @schema_name + '_jobs] PRIMARY KEY (id),

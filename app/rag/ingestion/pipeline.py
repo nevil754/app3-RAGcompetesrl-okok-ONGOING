@@ -62,7 +62,7 @@ def run_ingestion_pipeline(
     if not chunks:
         raise ValueError(f"Nessun chunk estratto dal documento {filename}")
     texts = [ c.text for c in chunks ]  #estrai solo il test e crei array
-    vectors = embed_texts(texts)   #🔥🔥🔥HERE ACCADE EMBEDDING DEI DOCS!!
+    vectors = embed_texts(texts)    #🔥🔥🔥HERE ACCADE EMBEDDING DEI DOCS!!
     logger.debug( f"Embedding: {len(vectors)} vettori generati" )
     collection_name = ensure_collection( tenant_slug, settings.qdrant_force_recreate )
     client = get_qdrant_client()
