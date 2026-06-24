@@ -82,12 +82,12 @@ class ChatService:
             chunks=chunks,
             session_messages=session_messages,
         )
-        # Pulizia risposta: rimuove artefatti LLM, tronca se troppo lunga, fallback se vuota
+        #pulizia risposta: rimuove artefatti LLM, tronca se troppo lunga, fallback se vuota
         validation = validate_answer(result["answer"], question)
         if validation.was_modified:
             result["answer"] = validation.answer
             logger.debug("Risposta corretta dal validator", issues=validation.issues)
-        # Hallucination check: verifica che la risposta sia supportata dai documenti
+        #hallucination check: verifica che la risposta sia supportata dai documenti
         hall_score = await check_faithfulness(question, result["answer"], chunks)
         if is_hallucination(hall_score):
             logger.warning(
@@ -169,12 +169,12 @@ class ChatService:
             full_answer += token
             yield token
         latency_ms = round((time.time() - start) * 1000)
-        # Pulizia risposta dopo che lo stream è completato
+        #pulizia risposta dopo che lo stream è completato
         validation = validate_answer(full_answer, question)
         if validation.was_modified:
             full_answer = validation.answer
             logger.debug("Risposta streaming corretta dal validator", issues=validation.issues)
-        # Hallucination check post-stream
+        #hallucination check post-stream
         hall_score = await check_faithfulness(question, full_answer, chunks)
         if is_hallucination(hall_score):
             logger.warning(

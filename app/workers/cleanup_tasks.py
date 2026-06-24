@@ -11,7 +11,7 @@ from app.workers.celery_app import celery_app  #ur custom
 
 @celery_app.task(
     name="app.workers.cleanup_tasks.purge_tenant",   #the name
-    acks_late=True,  #🔥🔥il task viene confermato successfully solo DOPO il completamento 
+    acks_late=True,    #🔥🔥il task viene confermato successfully solo DOPO il completamento 
 )
 def purge_tenant(tenant_id: str, tenant_slug: str) -> dict:  #funct fa DELETE COMPLETO e irreversibile X L'UTENTE, cancella sql schema - qdrant collections - redis keys
     """
