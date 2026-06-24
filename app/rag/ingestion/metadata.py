@@ -5,7 +5,7 @@
 # =============================================================
 
 from __future__ import annotations   #x python legacy in prj big soprattutto, trasforma 'def get_user()->User:' in 'def get_user() -> "User":' quindi tutte le annotazioni vengono conservate come str
-import re
+import re   #x regex
 from datetime import datetime, timezone  #x timestamp
 from pathlib import Path
 from typing import Any
@@ -35,7 +35,7 @@ def build_chunk_metadata(
         document_text_sample: primi 500 caratteri del documento
                               per classificazione automatica del tipo
     """
-    doc_type = _classify_document(document_text_sample, filename)  #è questa function here qua sotto
+    doc_type = _classify_document(document_text_sample, filename)   #è questa function here qua sotto
     metadata: dict[str, Any] = {
         # Campi obbligatori per isolamento multi-tenant
         "tenant_id": tenant_id,
@@ -43,7 +43,7 @@ def build_chunk_metadata(
         "document_id": document_id,
         "filename": filename,
         "file_type": file_type.lstrip(".").lower(),
-        "doc_type": doc_type,
+        "doc_type": doc_type,   #!questo lo prendi dal result di _classify_document()
         # Posizione nel documento
         "chunk_index": chunk_index,
         "page_number": page_number,

@@ -9,6 +9,7 @@ questo prj batterà app RAG internazionalmente famose come Legora/Harvey/ LexRoo
 --agents con flow Supervisore , ... ect..
 --files dentro mcp/
 --user_facts tab on sqlserver che appare in files long_term.py
+--metadata_config_file e path fallback "/app/config/metadata.yaml" in file metadata.py
 
 
 ############################################################################
