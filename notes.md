@@ -8,7 +8,7 @@ questo prj batterà app RAG internazionalmente famose come Legora/Harvey/ LexRoo
 --check se readbeat (x celry cosi che salva i tasks periodici in modo persistente su redis)
 --agents con flow Supervisore , ... ect..
 --files dentro mcp/
-
+--user_facts tab on sqlserver che appare in files long_term.py
 
 
 ############################################################################

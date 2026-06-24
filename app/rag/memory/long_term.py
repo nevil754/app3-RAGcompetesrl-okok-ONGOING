@@ -16,7 +16,7 @@ from app.core.settings import get_settings   #ur custom
 
 settings = get_settings()
 
-class LongTermMemory:
+class LongTermMemory:   #MEMORY A LUNGO TERMINE PERSISTITA SU SQLSERVER
     """
     Gestisce la memoria a lungo termine per un utente.
     Funzionalità:
@@ -56,7 +56,7 @@ class LongTermMemory:
         from app.core.llm_factory import get_llm
         from langchain_core.messages import HumanMessage, SystemMessage
         history = "\n".join(
-            f"{'Utente' if m['role'] == 'user' else 'Assistente'}: { m['content'] }"
+            f" {'Utente' if m['role'] == 'user' else 'Assistente'}: {m['content']} "
             for m in messages
         )
         llm = get_llm()
@@ -82,7 +82,7 @@ class LongTermMemory:
                 "user_id": self.user_id,
                 "summary": summary,
                 "turns": len(messages),
-            }
+            }  #TODO check tab conversation_summaries su init.sql
         )
         logger.info(
             "Summary conversazione salvato",
@@ -133,11 +133,11 @@ class LongTermMemory:
                 raw = raw.split("```")[1]
                 if raw.startswith("json"):
                     raw = raw[4:]
-            facts = json.loads(raw)   #converts json strutturato in corrisponfing python obj
+            facts = json.loads(raw)   #converts json strutturato in corrisponding python obj
         except Exception as e:
             logger.warning(f"Parsing fatti fallito: {e}")
             return []
-        # Salva fatti in SQL Server
+        #salva fatti in SQL Server
         for fact in facts:
             await self._upsert_fact(conversation_id, fact)   #function here qua sotto
         logger.info(f"Estratti {len(facts)} fatti per utente {self.user_id}")
@@ -164,9 +164,10 @@ class LongTermMemory:
                 VALUES (source.user_id, source.fact_type, source.fact_key,
                         source.fact_value, source.confidence, source.source_conv_id);
             """),   #MERGE fai in un'unica istruzione cioe che richiederebbe select+update+insert, target è la tabella che verra mdificata, source è riga "virtuale" con i parametri passati dall'applicazione, match su user_id+fact_key+is_active se matcha aggiorna se non matcha inserisce nuovo record
+            #TODO user_facts tab on sqlserver
             {
                 "user_id": self.user_id,
-                "fact_type": fact.get("type", "generic"),  #'generic' è fallback
+                "fact_type": fact.get("type", "generic"),   #'generic' è fallback
                 "fact_key": fact.get("key", ""),
                 "fact_value": fact.get("value", ""),
                 "confidence": fact.get("confidence", 1.0),
@@ -191,7 +192,7 @@ class LongTermMemory:
             """),  #OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY significa "salta :offset rows e prendi le prossime :limit rows"
             {"user_id": self.user_id, "limit": limit}
         )
-        return [dict(r._mapping) for r in rows]   #_mapping converte row sqlalchemy in dict-like, dict() converte in dict normale
+        return [ dict(r._mapping) for r in rows ]   #_mapping converte row sqlalchemy in dict-like, dict() converte in dict normale
 
     async def get_recent_summaries(self, limit: int = 3) -> str:
         """
@@ -214,6 +215,4 @@ class LongTermMemory:
         if not summaries:
             return ""
         return "CONVERSAZIONI PRECEDENTI:\n" + "\n---\n".join(summaries)   #"\n---\n".join(summaries)  concatena i summaries con separatore '\n---\n'
-
-
 

@@ -56,7 +56,7 @@ async def retrieve(
     """
     k = top_k or settings.retriever_top_k
     logger.debug(f"Retrieval: query='{query[:50]}...', top_k={k}")
-    from app.core.embeddings import aembed_query  #versione async — non blocca event loop
+    from app.core.embeddings import aembed_query   #versione async — non blocca event loop
     query_vector = await aembed_query(query)
     from app.core.vectorstore import get_async_qdrant_client, get_collection_name
     from qdrant_client.http import models as qmodels

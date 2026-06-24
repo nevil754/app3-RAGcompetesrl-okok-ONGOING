@@ -19,7 +19,7 @@ class ChatMessage:
     role: str       #user | assistant | system
     content: str
 
-class ShortTermMemory:
+class ShortTermMemory:   #MEMORY A BREVE TERMINE W REDIS CACHE
     """
     Gestisce la memoria a breve termine di una conversazione.
     I messaggi vivono in Redis con TTL — scadono automaticamente.

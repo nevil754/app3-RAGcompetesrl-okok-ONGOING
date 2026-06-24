@@ -47,7 +47,7 @@ def parse_document(file_path: str) -> ParsedDocument:
     path = Path(file_path)
     if not path.exists():
         raise FileNotFoundError(f"File non trovato: {file_path}")
-    suffix = path.suffix.lower()  #.suffix è property di pathlib.Path che return l'estensione del file e.g. pdf / docx / ect
+    suffix = path.suffix.lower()   #.suffix è property di pathlib.Path che return l'estensione del file e.g. pdf / docx / ect
     mime_type = mimetypes.guess_type(file_path)[0] or ""  # guess_type() ritorna una tupla (type, encoding), con [0] prendo solo il type
     logger.info(f"Parsing documento: {path.name} ({suffix})")
     if suffix in {".pdf", ".docx", ".pptx"} and settings.ingestion_prefer_docling:
@@ -63,7 +63,8 @@ def parse_document(file_path: str) -> ParsedDocument:
     else:
         return _parse_with_unstructured(file_path)
 
-def _parse_with_docling(file_path: str) -> ParsedDocument:   #parse usando lib docling (l'hai gia scaricata)
+
+def _parse_with_docling(file_path: str) -> ParsedDocument:   #parse usando libreria Docling🔥 (l'hai gia scaricata)
     """
     Parser avanzato con docling.
     Preserva struttura documenti complessi: contratti, bilanci, normative.
@@ -73,31 +74,38 @@ def _parse_with_docling(file_path: str) -> ParsedDocument:   #parse usando lib d
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions  #obj di config per la pipeline pdf 
     pipeline_options = PdfPipelineOptions()
-    pipeline_options.do_table_structure = settings.ingestion_extract_tables  #do_table_structure è booleano: True  → estrai tabelle strutturate, False → non farlo (o estrazione semplificata)
+    pipeline_options.do_table_structure = settings.ingestion_extract_tables  #do_table_structure è booleano: True  -> estrai tabelle strutturate, False -> non farlo (o estrazione semplificata)
     pipeline_options.do_ocr = False  #False disattivo il riconoscimento del testo dalle immagini (OCR, xk è leento)
     converter = DocumentConverter()
-    result = converter.convert(file_path)   #🔥lo converte in un oggetto docling Document, con testo, pagine, tabelle e metadata estratti
+    result = converter.convert(file_path)   #lo converte in un oggetto docling Document🔥, con testo, pagine, tabelle e metadata estratti
     doc = result.document
-    # Esporta in markdown — preserva intestazioni, tabelle, liste
+    #esporta in markdown — preserva intestazioni, tabelle, liste
     full_text = doc.export_to_markdown()  #ora hai ottenuto la versione Markdown!!
-    # Raccoglie testo per pagina usando la provenienza degli item (Docling v2 API).
-    # doc.pages è una lista di PageItem senza get_elements(), si usa iterate_items().
+    #raccoglie testo per pagina usando la provenienza degli item (Docling v2 API).
+    #doc.pages è una lista di PageItem senza get_elements(), si usa iterate_items().
     page_texts: dict[int, list[str]] = {}
-    for item, _level in doc.iterate_items():
-        prov_list = getattr(item, "prov", None)
+    for item, _level in doc.iterate_items():   #Docling espone il documento come albero in sequenza e.g.Titolo -> Paragrafo ... , _level è il livello gerarchico ma tu non lo usi cmnq
+        prov_list = getattr(item, "prov", None)   #check se item possiede item.prov
         if not prov_list:
             continue
-        page_no = prov_list[0].page_no
-        content = getattr(item, "text", None) or ""
+        page_no = prov_list[0].page_no  #prendo il numero di pagina dalla provenienza del primo elemento (prov[0]) dell'item
+        content = getattr(item, "text", None) or ""   #prendo il testo dell'item
         if content:
             page_texts.setdefault(page_no, []).append(content)
-    pages = ["\n".join(page_texts.get(p, [])) for p in range(1, len(doc.pages) + 1)]
+            #e.g. page_no = 3 e poi il primo blocco è il paragrafo "Introduzione"...
+            # {
+            #     3: [
+            #         "Introduzione",
+            #         "Secondo paragrafo"
+            #     ]
+            # }
+    pages = [ "\n".join(page_texts.get(p, [])) for p in range(1, len(doc.pages) + 1) ]
     tables = []
-    if settings.ingestion_extract_tables:  #questo field esiste in config.yaml
+    if settings.ingestion_extract_tables:   #questo field esiste in config.yaml
         for table in doc.tables:
             tables.append({
                 "page": table.prov[0].page_no if table.prov else None,
-                "markdown": table.export_to_markdown(),
+                "markdown": table.export_to_markdown(),   #ora hai ottenuto la versione Markdown!!
             })
     metadata = {
         "parser": "docling",
@@ -118,6 +126,44 @@ def _parse_with_docling(file_path: str) -> ParsedDocument:   #parse usando lib d
         metadata=metadata,
         page_count=len(pages),
     )
+
+
+def _parse_excel(file_path: str) -> ParsedDocument:
+    """Estrae testo da file Excel come tabelle markdown."""
+    import openpyxl
+    wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+    sheets_text: list[str] = []
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        rows = []
+        for row in ws.iter_rows(values_only=True):
+            if any(cell is not None for cell in row):
+                rows.append(" | ".join(str(c or "") for c in row))
+        if rows:
+            sheet_md = f"## Foglio: {sheet_name}\n\n" + "\n".join(rows)
+            sheets_text.append(sheet_md)
+    full_text = "\n\n".join(sheets_text)
+    return ParsedDocument(
+        text=full_text,
+        pages=[full_text],
+        tables=[],
+        metadata={"parser": "openpyxl", "sheets": wb.sheetnames},
+        page_count=1,
+    )
+
+
+def _parse_text(file_path: str) -> ParsedDocument:
+    """Lettura diretta per file .txt e .md."""
+    with open(file_path, encoding="utf-8", errors="replace") as f:
+        text = f.read()
+    return ParsedDocument(
+        text=text,
+        pages=[text],
+        tables=[],
+        metadata={"parser": "text"},
+        page_count=1,
+    )
+
 
 def _parse_with_unstructured(file_path: str) -> ParsedDocument:   #parse usando lib unstructured (l'hai gia scaricata)
     """
@@ -154,39 +200,3 @@ def _parse_with_unstructured(file_path: str) -> ParsedDocument:   #parse usando 
         metadata={"parser": "unstructured", "page_count": len(pages)},
         page_count=len(pages),
     )
-
-def _parse_text(file_path: str) -> ParsedDocument:
-    """Lettura diretta per file .txt e .md."""
-    with open(file_path, encoding="utf-8", errors="replace") as f:
-        text = f.read()
-    return ParsedDocument(
-        text=text,
-        pages=[text],
-        tables=[],
-        metadata={"parser": "text"},
-        page_count=1,
-    )
-
-def _parse_excel(file_path: str) -> ParsedDocument:
-    """Estrae testo da file Excel come tabelle markdown."""
-    import openpyxl
-    wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
-    sheets_text: list[str] = []
-    for sheet_name in wb.sheetnames:
-        ws = wb[sheet_name]
-        rows = []
-        for row in ws.iter_rows(values_only=True):
-            if any(cell is not None for cell in row):
-                rows.append(" | ".join(str(c or "") for c in row))
-        if rows:
-            sheet_md = f"## Foglio: {sheet_name}\n\n" + "\n".join(rows)
-            sheets_text.append(sheet_md)
-    full_text = "\n\n".join(sheets_text)
-    return ParsedDocument(
-        text=full_text,
-        pages=[full_text],
-        tables=[],
-        metadata={"parser": "openpyxl", "sheets": wb.sheetnames},
-        page_count=1,
-    )
-
