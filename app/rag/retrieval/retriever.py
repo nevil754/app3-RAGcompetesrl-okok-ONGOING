@@ -62,7 +62,7 @@ async def retrieve(
     from qdrant_client.http import models as qmodels
     client = get_async_qdrant_client()
     collection_name = get_collection_name(tenant_slug)
-    must_conditions = [  #costruisci filtro qdrant
+    must_conditions = [    #costruisci filtro qdrant
         qmodels.FieldCondition(
             key="tenant_id",
             match=qmodels.MatchValue(value=tenant_id)  #🔥🔥SEMPRE TENANT ISOLATION!!
@@ -83,7 +83,7 @@ async def retrieve(
                     match=qmodels.MatchValue(value=value)
                 )
             )
-    qdrant_filter = qmodels.Filter(must=must_conditions)
+    qdrant_filter = qmodels.Filter(must=must_conditions)  #sva ein var all filters necessary
     #🔥🔥Dense Search (semantic similarity)
     dense_results = await client.search(
         collection_name=collection_name,
@@ -93,11 +93,11 @@ async def retrieve(
         with_payload=True,
         score_threshold=0.3,
     )
-    #🔥🔥Sparse Search (SPLADE keyword) se abilitato
+    #🔥🔥Sparse Search (SPLADE keyword⚡️) se abilitato
     sparse_results = []
     if settings.qdrant_use_sparse:
         try:
-            sparse_vector = await _abuild_sparse_vector(query)  #async: carica modello in thread pool
+            sparse_vector = await _abuild_sparse_vector(query)  #async: carica modello in thread pool, usi SPADE better than BM25!!
             sparse_results = await client.search(
                 collection_name=collection_name,
                 query_vector=qmodels.NamedSparseVector(name="sparse", vector=sparse_vector),
@@ -116,8 +116,8 @@ async def retrieve(
         fused = await _async_cross_encoder_rerank(query, fused, top_k=settings.reranker_top_k)
 
     #⭐️⭐️pipeline:
-    #1. Hybrid Search (dense + sparse SPLADE) → Top 20 risultati
-    #2. RRF fusion → 1 ranking unico con i migliori di entrambi
+    #1. Hybrid Search (dense + sparse SPLADE searches) → Top 20 risultati
+    #2. RRF fusion → 1 ranking unico con i migliori di entrambi (provenienti da dense search e sparse SPLADE seach)
     #3. MMR → diversifica, penalizza chunk troppo simili
     #4. Cross-Encoder reranker → Top 5 precisi
 
@@ -143,20 +143,23 @@ async def retrieve(
 def _get_splade_model() -> Any:
     """Singleton modello SPLADE — caricato una sola volta come embedding e reranker."""
     from fastembed import SparseTextEmbedding
-    logger.info("Caricamento modello SPLADE sparse", model="prithivida/Splade_PP_en_v1")
+    logger.info("Caricamento modello SPLADE sparse", model="prithivida/Splade_PP_en_v1")  #top model accuratezza/speed
     return SparseTextEmbedding(model_name="prithivida/Splade_PP_en_v1")
+
 
 def _build_sparse_vector(query: str) -> Any:  #🔥utilizzo Sparse Search w SPLADE type (better than BM25 type base)
     """Costruisce vettore sparso SPLADE per la query."""
-    model = _get_splade_model()  #singleton: non ricreato ad ogni chiamata
+    model = _get_splade_model()  # SPLADE!!not MB25 basic! singleton: non ricreato ad ogni chiamata
     vectors = list(model.embed([query]))
     v = vectors[0]
     return {"indices": v.indices.tolist(), "values": v.values.tolist()}
+
 
 async def _abuild_sparse_vector(query: str) -> Any:
     """Versione async di _build_sparse_vector — eseguita in thread pool per non bloccare l'event loop."""
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _build_sparse_vector, query)
+
 
 def _rrf_fusion(  #🔥🔥RRF fusion technique!! formula score=1/(rank+k). k=60 stabilizza la curva, rank è la posizione nel risultato.
     dense: list,  #risultati semantic search Qdrant
@@ -188,6 +191,7 @@ def _rrf_fusion(  #🔥🔥RRF fusion technique!! formula score=1/(rank+k). k=60
             }
         scores[rid]["score"] += 1.0 / (60 + rank + 1)   #accedi all campo target e fai update
     return sorted( scores.values(), key=lambda x: x["score"], reverse=True )    #prende tutti i chunks, e li ordin per score decrescente.
+
 
 def _mmr_rerank(      #Re-Ranking technique, formuala  λ*relevance-(1-λ)*similarity. QUESTA MIA VERSIONE è meno potente della vera versione di mmr!!
     query_vector: list[float],
@@ -230,6 +234,7 @@ def _mmr_rerank(      #Re-Ranking technique, formuala  λ*relevance-(1-λ)*simil
         #sposti il best nei risultati finali e lo rimuovi da quelli rimanenti
     return selected  #return the bests
 
+
 def _score_similarity(a: dict, b: dict) -> float:
     """Similarità approssimata tra due chunk basata sul filename e chunk_index."""
     pa, pb = a["payload"], b["payload"]
@@ -239,6 +244,7 @@ def _score_similarity(a: dict, b: dict) -> float:
         #calcola la distanza tra i chunk (), più sono vicini più sono simili, quindi similarity è 1 quando diff=0, e decresce linearmente fino a 0 quando diff>=10 (puoi regolare questo valore in base alla lunghezza media dei tuoi chunk, ma 10 è un buon punto di partenza)
         return max(0, 1.0 - diff * 0.1)   #questa è la formula equivale a similarity = 1 - 0.1 * diff. e.g. diff=0  1-0*0.1 -> 1  result similarity = 1.0 (massima similarita),  se è invece diff=1 (chunks adiacenti) ... result similarity = 0.9
     return 0.0
+
 
 def _cross_encoder_rerank(  #ReRanking technique usando Cross-Encoder (NON Bi-Encoder)
     query: str,
@@ -261,6 +267,7 @@ def _cross_encoder_rerank(  #ReRanking technique usando Cross-Encoder (NON Bi-En
     reranked = sorted(results, key=lambda x: x.get("rerank_score", 0), reverse=True)
     logger.debug(f"Reranking: {len(results)} → {top_k} chunk")
     return reranked[:top_k]
+
 
 async def _async_cross_encoder_rerank(query: str, results: list[dict], top_k: int) -> list[dict]:
     """Versione async di _cross_encoder_rerank — eseguita in thread pool per non bloccare l'event loop."""
