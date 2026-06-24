@@ -35,7 +35,7 @@ def rollup_usage() -> dict:
     Aggrega e salva usage stats giornaliero per tutti i tenant.
     Legge i contatori Redis accumulati durante il giorno
     e li persiste in shared.usage_stats su SQL Server.
-    Chiamato ogni notte da celery-beat.  MA UTILIZZO REDBEAT per persistere vero??
+    Chiamato ogni NOTTE da celery-beat.   TODO MA UTILIZZO REDBEAT per persistere vero??
     """
     import asyncio   #x async funct
     from app.db.sqlserver import tenant_db   #ur custom
@@ -52,7 +52,7 @@ def rollup_usage() -> dict:
         client = get_redis()
         today = __import__("datetime").date.today().isoformat()   #e.g. 2026-06-15
         base = f"tenant:{tenant_id}:stats:{today}"  #e.g. tenant:123:stats:2026-06-15
-        pipe = client.pipeline()    #crea pipeline= batch di operazioni (piu veloce)
+        pipe = client.pipeline()        #crea pipeline= batch di operazioni (piu veloce)
         pipe.get(f"{base}:tokens_in")   #lettura e.g. tenant:123:stats:2026-06-15:tokens_in
         pipe.get(f"{base}:tokens_out")
         pipe.get(f"{base}:queries")
@@ -71,8 +71,8 @@ def rollup_usage() -> dict:
         stats = loop.run_until_complete( _get_tenant_stats(str(tenant.id)) )   #function annidata here qua sopra 
         if stats["queries_count"] == 0 and stats["docs_ingested"] == 0:   #skip tenants inattivi! (di oggi)
             continue
-        # Usa _sync_factory() direttamente: SA ha accesso allo schema shared senza impersonation.
-        # get_session("shared") cercherebbe usr_tenant_shared che non esiste.
+        #usa _sync_factory() direttamente: SA ha accesso allo schema shared senza impersonation
+        #get_session("shared") cercherebbe usr_tenant_shared che non esiste
         with tenant_db._sync_factory() as session:
             session.execute(
                 text("""
@@ -96,7 +96,7 @@ def rollup_usage() -> dict:
                 """),
                 {
                     "tenant_id": str(tenant.id),
-                    **stats,  # {"tokens_in": ..., "tokens_out": ..., "queries_count": ..., "docs_ingested": ...}
+                    **stats,   # {"tokens_in": ..., "tokens_out": ..., "queries_count": ..., "docs_ingested": ...}
                 }
             )
             session.commit()
