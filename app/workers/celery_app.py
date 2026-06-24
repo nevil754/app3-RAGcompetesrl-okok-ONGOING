@@ -7,6 +7,7 @@ from celery import Celery  #x celery
 from kombu import Queue  #kombu è la lib AMQP(Advanced Message Queuing Protocol) usata internamente da celery per gestire code, mexs, routing, ecc
 from app.core.settings import get_settings
 
+
 settings = get_settings()
 
 def create_celery_app() -> Celery:  #this is a factory function, non è singleton
@@ -25,18 +26,18 @@ def create_celery_app() -> Celery:  #this is a factory function, non è singleto
     )
 
     app.conf.update(   #aggiorna la configurazione di Celery con questi params
-        #x Serializzazione
-        task_serializer="json",  #quando mandi e.g. task.delay(user_id=10) celery converte tutto in json
+        #x serializzazione
+        task_serializer="json",    #quando mandi e.g. task.delay(user_id=10) celery converte tutto in json
         result_serializer="json",  #anche il result viene convertito in json prima di essere salvato nel backend
-        accept_content=["json"],  #accetta solo mexs in formato json, anche x security
-        #x Risultati
+        accept_content=["json"],   #accetta solo mexs in formato json, anche x security
+        #x risultati
         result_expires=86400,          #i results scadono dopo 24h in Redis
         task_track_started=True,       #traccia anche quando il task inizia (cioe STARTED) aggiunto ai 3 di default SUCCESS|FAILURE|PENDING)
-        #x Affidabilità — CRITICI
+        #x affidabilità — CRITICI
         task_acks_late=True,           #ACK di conferma di task completata
         worker_prefetch_multiplier=1,  #OGNI WORKER PRENDE 1 SOLO TASK ALLA VOLTA, di default un worker prende 4 task alla volta
         task_reject_on_worker_lost=True,    #se worker crasha, task torna in coda
-        #x Code
+        #x code
         task_queues=[  #🔥definisce le QUEUES, e.g.per un upload bulk di many docs allora il task è consigliato utilizzare il 'low'
             Queue("high",           routing_key="high"),
             Queue("default",        routing_key="default"),

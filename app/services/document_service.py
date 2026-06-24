@@ -93,9 +93,8 @@ class DocumentService:
             """),
             {"id": job_id, "doc_id": document_id}
         )
-        #dispatch task Celery sulla coda default
         from app.workers.ingestion_tasks import ingest_document
-        task = ingest_document.apply_async(
+        task = ingest_document.apply_async(    #dispatch task Celery sulla coda default
             args=[
                 self.tenant_id,
                 self.tenant_slug,
