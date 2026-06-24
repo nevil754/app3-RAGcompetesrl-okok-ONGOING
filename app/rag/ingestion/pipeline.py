@@ -40,7 +40,7 @@ def run_ingestion_pipeline(
         dict con chunk_count, page_count, collection_name
     """
     path = Path(file_path)
-    filename = path.name
+    filename = path.name 
     file_type = path.suffix
     logger.info(
         "Pipeline ingestion avviata",
@@ -61,10 +61,10 @@ def run_ingestion_pipeline(
     logger.debug( f"Chunking: {len(chunks)} chunk" )
     if not chunks:
         raise ValueError(f"Nessun chunk estratto dal documento {filename}")
-    texts = [ c.text for c in chunks ]  #estrai solo il test e crei array
+    texts = [ c.text for c in chunks ]    #estrai solo il test e crei array
     vectors = embed_texts(texts)    #🔥🔥🔥HERE ACCADE EMBEDDING DEI DOCS!!
     logger.debug( f"Embedding: {len(vectors)} vettori generati" )
-    collection_name = ensure_collection( tenant_slug, settings.qdrant_force_recreate )
+    collection_name = ensure_collection( tenant_slug, settings.qdrant_force_recreate )  #TODO non ho qdrant_force_recreate
     client = get_qdrant_client()
     from qdrant_client.http import models as qmodels  #models serve per ottenere PointStruct Filter FieldCondition MatchValue FilterSelector
     points = []
@@ -80,7 +80,7 @@ def run_ingestion_pipeline(
             document_text_sample=clean[:500], 
         )  #payload che viene aggiunto per ogni vettore, serve per ogni vettore per eseguire i filtri!! molto importante 
         payload["text"] = chunk.text  #aggiungi nel payload anche il testo del chunk
-        points.append( qmodels.PointStruct(  #obj che rappresenta un singolo punto vettoriale dentro qdrant 
+        points.append( qmodels.PointStruct(  #PointStruct è obj che rappresenta un singolo punto vettoriale dentro qdrant 
             id=str(uuid.uuid4()),
             vector={"dense": vector},   #visto che vectro puo essere e.g. [23, 45, 67] allora otteniamo e.g. {"dense": [23, 45, 67]}
             payload=payload,
@@ -99,7 +99,7 @@ def run_ingestion_pipeline(
     batch_size = 100   #qdrant supporta inserimenti a batch, quindi invece di fare 1 upsert per ogni punto, facciamo 1 upsert ogni 100 punti
     for i in range( 0, len(points), batch_size ):   #slices 0-99, 100-199, ect
         batch = points[i:i + batch_size]   #prendi il blocco di 100 elems
-        client.upsert(collection_name=collection_name, points=batch)  #🔥upsert fa update+insert command, quindi crei una nuova riga se non esisteva altrimenti la aggiorni
+        client.upsert(collection_name=collection_name, points=batch)   #🔥upsert fa update+insert command, quindi crei una nuova riga se non esisteva altrimenti la aggiorni
         logger.debug(f"Upserted batch {i // batch_size + 1}: { len(batch) } punti")
     logger.info(
         "Pipeline ingestion completata",
