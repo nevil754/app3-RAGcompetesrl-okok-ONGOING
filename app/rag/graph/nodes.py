@@ -4,6 +4,7 @@
 # Riceve lo stato, lo aggiorna, ritorna le chiavi modificate.
 # =============================================================
 
+
 from __future__ import annotations   #x python legacy in prj big soprattutto, trasforma 'def get_user()->User:' in 'def get_user() -> "User":' quindi tutte le annotazioni vengono conservate come str
 import time
 from loguru import logger
@@ -17,12 +18,14 @@ async def node_route(state: RAGState) -> dict:
     logger.debug(f"Grafo: route → {route}")
     return {"route": route}
 
+
 async def node_load_session(state: RAGState) -> dict:
     """Carica la short-term memory dalla sessione Redis."""
     from app.core.redis_client import TenantRedis
     redis = TenantRedis( tenant_id=state["tenant_id"] )
     messages = await redis.get_session( state["conversation_id"] )
     return {"session_messages": messages}
+
 
 async def node_retrieve(state: RAGState) -> dict:
     """Retrieval ibrido: dense + sparse search → RRF → MMR → reranker."""
@@ -38,11 +41,13 @@ async def node_retrieve(state: RAGState) -> dict:
     logger.debug(f"Retrieval: {len(chunks)} chunk in {elapsed}ms")
     return {"retrieved_chunks": chunks}
 
+
 async def node_web_search(state: RAGState) -> dict:
     """Ricerca web con Tavily/DDGS."""
     from app.rag.agents.web_agent import web_search_and_answer
     results = await web_search_and_answer(state["question"])
     return {"web_results": results}
+
 
 async def node_generate(state: RAGState) -> dict:
     """Genera la risposta RAG con l'LLM."""
@@ -61,6 +66,7 @@ async def node_generate(state: RAGState) -> dict:
         "latency_ms": result.get("latency_ms", 0),
     }
 
+
 async def node_generate_web(state: RAGState) -> dict:
     """Ritorna la risposta dal web agent."""
     web = state.get("web_results") or {}
@@ -72,6 +78,7 @@ async def node_generate_web(state: RAGState) -> dict:
         "latency_ms": 0,
     }
 
+
 async def node_check_hallucination(state: RAGState) -> dict:
     """Calcola hallucination score sulla risposta."""
     from app.rag.generation.hallucination import check_faithfulness
@@ -81,6 +88,7 @@ async def node_check_hallucination(state: RAGState) -> dict:
         chunks=state.get("retrieved_chunks", []),
     )
     return {"hallucination_score": score}
+
 
 async def node_save_to_memory(state: RAGState) -> dict:
     """Aggiorna la sessione Redis con i nuovi messaggi."""
