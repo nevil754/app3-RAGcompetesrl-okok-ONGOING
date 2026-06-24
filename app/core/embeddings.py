@@ -33,6 +33,7 @@ def get_embedding_model() -> Any:
     logger.info("Modello embedding caricato", model=settings.embeddings_model)  #log strutturato
     return model
 
+
 def embed_texts( texts: list[str] ) -> list[list[float]]:
     """
     Genera embedding per una lista di testi.
@@ -55,7 +56,7 @@ def embed_texts( texts: list[str] ) -> list[list[float]]:
     # array([-0.1115,  0.0097,  0.0052,  0.0195, ...], dtype=float32),
     # array([-0.1019,  0.0635, -0.0332,  0.0522, ...], dtype=float32)
     # ]
-    return [v.tolist() for v in vectors]   #converts array([0.1, 0.2])(array numpy) -> [0.1, 0.2] perché Qdrant vuole liste normali per lavorare!!
+    return [ v.tolist() for v in vectors ]   #converts array([0.1, 0.2])(array numpy) -> [0.1, 0.2] perché Qdrant vuole liste normali per lavorare!!
 
 def embed_query(text: str) -> list[float]:
     """

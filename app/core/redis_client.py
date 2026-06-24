@@ -3,8 +3,8 @@
 # Ogni chiave è prefissata con tenant:{id}: per isolamento completo.
 from __future__ import annotations  #abilita forward references e typing moderno python, nelle new versions python non serve piu, ma io sto usando python 3.11.19, evita errori che non runni def test() -> MyClass: prima che MyClass sia definita
 import json
-from functools import lru_cache  #x singleton cache
-from typing import Any  #x typing generico python
+from functools import lru_cache    #x singleton cache
+from typing import Any             #x typing generico python
 import redis.asyncio as aioredis   #x Redis asincrono🔥 (non blocca FastAPI!)
 from loguru import logger
 
@@ -17,12 +17,12 @@ def get_redis() -> aioredis.Redis:  #crea una sola connessione x processo
     from app.core.settings import get_settings
     settings = get_settings()
     logger.info("Connessione Redis", url=settings.redis_url)
-    return aioredis.from_url(    #return client Redis async (xk utilizzo aioredis)
+    return aioredis.from_url(       #return client Redis async (xk utilizzo aioredis)
         settings.redis_url,
         decode_responses=True,      #redis return stringhe non bytes
         socket_connect_timeout=5,   #timeout connessione Redis
-        socket_timeout=5,         #timeout operazioni Redis
-        retry_on_timeout=True,    #resilienza contro timeout temporanei
+        socket_timeout=5,           #timeout operazioni Redis
+        retry_on_timeout=True,      #resilienza contro timeout temporanei
     )
 
 @lru_cache(maxsize=1)
@@ -141,7 +141,7 @@ class TenantRedis:
         key = self._key("ratelimit", user_id)  #costruisce chiave e.g. tenant:abc123:ratelimit:user123 per tracciare le richieste di questo utente
         pipe = self._redis.pipeline()
         pipe.incr(key)  #ogni req, incrementa il contatore (🔥VIENE SALVATO IN REDIS SOTTO QUESTA KEY, non la salviamo in una variabile particolare)
-        pipe.expire(key, window_seconds)    #setta l'expire della target session ad X, quindi dopo X di inattività la sessione viene cancellata automaticamente da Redis evitando cosi l'accumulo di dati vecchi e inutili
+        pipe.expire(key, window_seconds)  #setta l'expire della target session ad X, quindi dopo X di inattività la sessione viene cancellata automaticamente da Redis evitando cosi l'accumulo di dati vecchi e inutili
         results = await pipe.execute()   #esegue tutte le operazioni in pipeline in un colpo solo
         count = results[0]   #results è un array cioè  [ 1 (è il risultato di INCR), True (è il risultato di EXPIRE) ]
         return ( count <= max_requests, count )   #return tupla (True/False, numero attuale di richieste fatte)

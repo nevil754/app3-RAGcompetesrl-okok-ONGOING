@@ -74,12 +74,12 @@ def decode_access_token(token: str) -> dict[str, Any] | None:   #check validatio
         Payload del token se valido, None se scaduto o invalido.
     """
     try:
-        payload = jwt.decode(  #verifica firma-scadenza-algh
+        payload = jwt.decode(    #verifica firma-scadenza-algh
             token,
             settings.jwt_secret_key,
             algorithms=[settings.jwt_algorithm],
         )
-        return payload
+        return payload   #return payload del token decodificato
     except JWTError as e:
         logger.debug(f"JWT decode fallito: {e}")
         return None

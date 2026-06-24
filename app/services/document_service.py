@@ -85,18 +85,15 @@ class DocumentService:
                 "user_id": self.user_id,
             }
         )
-
-        # Crea record job di ingestion
         job_id = str(uuid4())
-        await self.db.execute(
+        await self.db.execute(    #crea record in tab ingestion_jobs
             text("""
                 INSERT INTO ingestion_jobs (id, document_id, status)
                 VALUES (:id, :doc_id, 'queued')
             """),
             {"id": job_id, "doc_id": document_id}
         )
-
-        # Dispatch task Celery sulla coda default
+        #dispatch task Celery sulla coda default
         from app.workers.ingestion_tasks import ingest_document
         task = ingest_document.apply_async(
             args=[
@@ -109,17 +106,16 @@ class DocumentService:
             queue="default",
             headers={"tenant_id": self.tenant_id},
         )
-
         logger.info(
             "Documento in coda",
             document_id=document_id,
             filename=original_filename,
             task_id=task.id,
         )
-
         return {
             "document_id": document_id,
             "job_id": job_id,
             "task_id": task.id,
             "status": "queued",
         }
+

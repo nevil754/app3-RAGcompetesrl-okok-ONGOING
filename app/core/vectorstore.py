@@ -17,7 +17,7 @@ def get_qdrant_client() -> QdrantClient:
     from app.core.settings import get_settings  #ur custom settings 
     settings = get_settings()
     logger.info("Connessione Qdrant", url=settings.qdrant_url)
-    kwargs: dict[str, Any] = {"url": settings.qdrant_url}  #costruisce parametri dinamici, edit x tutti
+    kwargs: dict[str, Any] = {"url": settings.qdrant_url}   #costruisce parametri dinamici, edit x tutti
     if settings.qdrant_api_key:
         kwargs["api_key"] = settings.qdrant_api_key  #edit only if settings.qdrant_api_key is true/present
     return QdrantClient(**kwargs)  #equivale a QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key[questo modificato solo nella condition here qua sopra] ) se api_key è presente, altrimenti senza api_key
@@ -130,13 +130,15 @@ def ensure_collection(
     )
     return collection_name
 
+
 async def aensure_collection( tenant_slug: str, force_recreate: bool = False ) -> str:  #versione Async di ensure_collection
     """Versione async di ensure_collection."""
     import asyncio
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor( None, ensure_collection, tenant_slug, force_recreate )
 
-async def adelete_tenant_collections(tenant_slug: str) -> None:  #cancella tutte le collections di un target tenant
+
+async def adelete_tenant_collections(tenant_slug: str) -> None:   #cancella tutte le collections di un target tenant
     """
     Cancella tutte le collection Qdrant di un tenant.
     Chiamato durante l'offboarding del tenant (quando un cliente è cancellato dalla piattaforma).
