@@ -30,7 +30,7 @@ def build_rag_context(
     """
     context_parts = []
     total_chars = 0
-    for i, chunk in enumerate(chunks, 1):
+    for i, chunk in enumerate(chunks, 1):  #1-based
         source_label = f"[Fonte {i}: {chunk.filename}"  #crea e.g. [Fonte 2: contratto.pdf
         if chunk.page_number:
             source_label += f", p.{chunk.page_number}"  #aggiungi concatenazione 
@@ -60,7 +60,7 @@ def build_rag_context(
         history_turns=len(session_messages),
         context_chars=total_chars,
     )
-    return {
+    return {  #ora è tutto perfetto, ciascuno è perfetto con anche \n all'interno
         "context": context,
         "history": history,        
         "facts": facts_text,
@@ -78,7 +78,7 @@ def format_sources_for_response( chunks: list[RetrievedChunk] ) -> list[dict]:
             "filename": chunk.filename,
             "page_number": chunk.page_number,
             "score": round(chunk.score, 4),   #4 decimali 
-            "snippet": chunk.text[:200] + "..." if len(chunk.text) > 200 else chunk.text,   # theseare200chars... oppure se i chars sono <200 allora return l'intero chunk.text
+            "snippet": chunk.text[:200] + "..." if len(chunk.text) > 200 else chunk.text,   #prende solo i primi 200chars... oppure se i chars sono <200 allora return l'intero chunk.text
         }
         for chunk in chunks
     ]

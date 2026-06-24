@@ -6,7 +6,7 @@
 
 from __future__ import annotations     #x python legacy in prj big soprattutto, trasforma 'def get_user()->User:' in 'def get_user() -> "User":' quindi tutte le annotazioni vengono conservate come str
 import json
-from dataclasses import dataclass  #decoratore da mettere sulla classe e ti da auto __init__, __repr__, __eq__ e altri metodi utili 
+from dataclasses import dataclass   #decoratore da mettere sulla classe e ti da auto __init__, __repr__, __eq__ e altri metodi utili 
 from loguru import logger
 from app.core.redis_client import TenantRedis
 from app.core.settings import get_settings
@@ -14,7 +14,7 @@ from app.core.settings import get_settings
 
 settings = get_settings()
 
-@dataclass
+@dataclass  
 class ChatMessage:
     role: str       #user | assistant | system
     content: str
@@ -36,7 +36,7 @@ class ShortTermMemory:
 
     async def add(self, role: str, content: str) -> None:
         """Aggiunge un messaggio alla sessione."""
-        await self.redis.append_message(   #append_message() è il tuo custom
+        await self.redis.append_message(    #append_message() è il tuo custom
             session_id=self.conversation_id,
             message={"role": role, "content": content},
             max_turns=self.max_turns,
@@ -45,18 +45,18 @@ class ShortTermMemory:
     async def get_all(self) -> list[ChatMessage]:
         """Ritorna tutti i messaggi della sessione corrente."""
         raw = await self.redis.get_session(self.conversation_id)
-        return [ChatMessage(role=m["role"], content=m["content"]) for m in raw]
+        return [ ChatMessage(role=m["role"], content=m["content"]) for m in ra ]
 
     async def get_formatted(self) -> str:
         """Formatta la storia per includerla nel prompt."""
-        messages = await self.get_all()  #here function qua sopra
+        messages = await self.get_all()  #here function qua sopra, ottieni lista di ChatMessage
         if not messages:
             return "Nessuna conversazione precedente."
         lines = []
         for msg in messages:
             prefix = "Utente" if msg.role == "user" else "Assistente"
             lines.append(f"{prefix}: {msg.content}")  #costruzione str
-        return "\n".join(lines)  #separa ogni elemento con '\n'
+        return "\n".join(lines)  #ritorno blocco unico, all'interno tutti gli elems separati da '\n'
 
     async def clear(self) -> None:
         """Cancella tutta la sessione."""
