@@ -56,13 +56,13 @@ def chunk_document(
     raw_chunks = splitter.split_text(text)  #splitta
     # Filtra chunk troppo piccoli (meno di min_chunk_size caratteri)
     min_size = max(50, chunk_size // 20)   #e.g. 1000 / 20 = 50, allora è 50, se veniva 40 allora era 50, perche con max(va1,val2) prende il valore piu alto 
-    raw_chunks = [c for c in raw_chunks if len(c.strip()) >= min_size]   #🔥rimuove i chunk troppo piccoli
+    raw_chunks = [ c for c in raw_chunks if len(c.strip()) >= min_size ]   #🔥rimuove i chunk troppo piccoli
     chunks: list[Chunk] = []
     for i, chunk_text in enumerate(raw_chunks):  #itera per ogni elemento della lista, quindi itera su ogni chunk
         page_num = _find_page_number(chunk_text, pages) if pages else None
         chunks.append( Chunk(
-            text=chunk_text.strip(),  #elimina spazi laterali
-            chunk_index=i,  #l'index
+            text=chunk_text.strip(),   #elimina spazi laterali
+            chunk_index=i,         #l'index
             page_number=page_num,  #quindi qua puo essere i | none
             metadata={ **(base_metadata or {}), "chunk_index": i }, #passa  metadata base (in forma **kargs xk è un dict quindi key-value) + chunk_index
         ))
@@ -73,11 +73,10 @@ def chunk_document(
     )   #x logging strutturato
     return chunks
 
-def _find_page_number(chunk_text: str, pages: list[str]) -> int | None:
+def _find_page_number( chunk_text: str, pages: list[str] ) -> int | None:
     """Trova in quale pagina appare il chunk cercando il testo."""
     for i, page_text in enumerate(pages, 1):   #enumerate() prende un lista su cui deve iterare & il num start
         if chunk_text[:100] in page_text:   #prende i primi 100chars del chunk e li cerca nella pagina page_text
             return i  #se trovato, ritorna l'indice della pagina 
     return None   #altrimenti return null
-
 
